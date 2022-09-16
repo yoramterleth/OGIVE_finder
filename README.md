@@ -14,9 +14,13 @@ The pulled elevation profile is detrended by a smoothed version of the same prof
 
 Then, we run a fast fourrier transform to get at the periodicity of the data. This seems to work best on the slope profile.
 
-Ultimetely, we should be able to compare with ice velocity from Itslive, and ensure that the periodicity is annual. 
+Ultimately, we should be able to compare with ice velocity from Itslive, and ensure that the periodicity is annual. 
 Running a periodogram rather than an fft should also allow us to retain information on the location along the centerline of the periodicity, 
 which should allow us to identify the location of the OGIVES. 
+
+### OGIVE_findr_single_glacier_v2.py
+
+This script does the same as above, but on a specific user defined glacier. Abandoned the Zhang profiles in favor of those that come with the RGI database, as they are much more continuous and still cover a lot of tributaries. Can input a specific shapefile centerline for testing. Now also pulls average spatially distributed velocity from Millan et al 2021 estimations, further steps are to hone in on the ogives in the spectrogram, and to implement it automatically over a lot of centerlines. 
 
 ### OGIVE_functions.py 
 
