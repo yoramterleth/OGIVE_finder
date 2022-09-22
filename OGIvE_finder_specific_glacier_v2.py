@@ -17,8 +17,11 @@ Then, we run a fast fourrier transform to get at the periodicity of the data. Th
 
 This script also pulls the average ice velocity from the Millan estimations, present as RGI_v1-6 in earth engine assets (not great)
 
-Running a periodogram rather than an fft should also allow us to retain information on the location along the centerline of the periodicity, 
-which should allow us to identify the location of the OGIVES. 
+Running a periodogram rather than an fft allows to retain information on the location along the centerline of the periodicity, 
+which allows to identify the location of the OGIVES.
+Ogives are flagged when the amplitude of oscillation at the wavelength corresponding to ~1 year of displacement (avg. ice velocities from Millan et
+                                                                                                                 et al. 2021)
+is more than 1.5 m on the DEM.  
 """
 
 
@@ -68,7 +71,8 @@ slope = ee.Terrain.slope(elev)
 
 #%% load in ice thickness from the GEE asset library 
 # this could be improved to make the script more flexible...)
-RGI = ee.Image('projects/ee-yoramterleth/assets/V_RGI-1_1')
+RGI = ee.Image('projects/ee-yoramterleth/assets/RGI_AK3')
+
 
 #%% calculate the bed elevation and slope  
 bed_elev = elev.subtract(RGI) 
@@ -268,14 +272,6 @@ ax1.set_ylabel('fft')
 ax1.set_xlabel('wavelenght (m)')
 plt.show()
 
-# plot the detended profile used
-fig2, (ax2a,ax2,ax2b) = plt.subplots(3,1,figsize=(10,5))
-ax2.plot(offset,targ_data)
-ax2.set_xlabel('distance along centerline (m)')
-
-ax2a.plot(offset,targ_true)
-
-ax2b.plot(offset, vel)
 
 
 # plot the spectrogram 
@@ -285,6 +281,70 @@ plt.ylabel('Oscillation Wavelength (m)')
 plt.xlabel('Distance along centerline (m)')
 
 ax3.set_ylim(20,500)
+
+    
+
+plt.show()
+
+
+#%% get the velocity of interest depending on location along centerline
+target_wavelength = vel /1 
+
+select_array = np.zeros(len(t))
+
+window_margin = 3 # in steps 
+
+# select from Sxx at the target_wavelength, -+ 50 m 
+for i in range(len(t)):
+    
+    # find index of the target wavelenght
+    targ_loc = np.abs(t[i] - offset).argmin()
+    ind_cent = (np.abs(wavelength[1:] - target_wavelength[targ_loc])).argmin()
+    
+    # select a slightly wider area when possible 
+    indices = np.arange(ind_cent - window_margin, ind_cent + window_margin, 1).tolist()
+    
+    # select the Sxx value in that area
+    try:
+        select_array[i] = np.amax(Sxx[indices,i])
+    except:
+        if indices[-1] > len(Sxx[:,0]):
+            select_array[i] = np.amax(Sxx[indices[0]:,i])
+            print('Reduced window at upper array bound.At d=' + str(t[i]))
+        elif indices[0] < 0:
+            select_array[i] = np.amax(Sxx[:indices[-1],i])
+            print('Reduced window at lower array bound. At d=' + str(t[i]))
+        else: 
+            print('Error: indexing should not fail. Skipping.At d=' + str(t[i]))
+            continue
+
+    
+#%% select the coordinates for the ogives 
+
+# need to implementn this, interp the max osci amplitude 
+# at the spatial res of the offset vecotrs, and make the trheshold ynamic...
+interp_select_array = np.interp(offset, t, select_array)
+
+# select area that is above 1 m, or above percentile threshold...
+select_xx = xx[interp_select_array>1.5] #np.percentile(interp_select_array,85)]
+select_yy = yy[interp_select_array>1.5] #np.percentile(interp_select_array,85)]
+
+print('plotting')
+
+
+# plot the detended profile used
+fig2, (ax2a,ax2,ax2b,ax2c) = plt.subplots(4,1,figsize=(12,13))
+ax2.plot(offset,targ_data)
+ax2c.set_xlabel('distance along centerline (m)')
+
+ax2a.plot(offset,targ_true)
+
+ax2b.plot(offset, vel)
+ax2b.set_ylabel('Average ice velocity (m/year)')
+
+ax2c.plot(offset,interp_select_array)
+ax2c.set_ylabel('Max. osc. Amp. - 1 year period (m)')
+
 if work_on_slope:
     ax2.set_ylabel('detrended slope (deg)')
     fig3.colorbar(aa,label='Oscillation amplitude (slope)')
@@ -295,18 +355,12 @@ else:
     ax2a.set_ylabel('elev. (m a.s.l.)')
     
 
-plt.show()
-
 fig3, ax3 = plt.subplots(figsize=(10,10))
-GLIMS_shp.plot(ax=ax3,alpha=0.4)
-ax3.scatter(xx,yy, c='green')
-cl.plot(ax=ax3,color='red',linewidth=2) 
-
-#%% get the velocity of interest depending on location along centerline
-target_wavelength = vel /1 
-
-
-
+GLIMS_shp.plot(ax=ax3,alpha=0.7)
+ax3.scatter(select_xx,select_yy, c='red')
+cl.plot(ax=ax3,color='green',linewidth=2) 
+ax3.set_xlabel('lon (deg)')
+ax3.set_ylabel('lat (deg)')
 
 print('Done!')
 
