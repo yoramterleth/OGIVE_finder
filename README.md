@@ -22,6 +22,10 @@ which should allow us to identify the location of the OGIVES.
 
 This script does the same as above, but on a specific user defined glacier. Abandoned the Zhang profiles in favor of those that come with the RGI database, as they are much more continuous and still cover a lot of tributaries. Can input a specific shapefile centerline for testing. Now also pulls average spatially distributed velocity from Millan et al 2021 estimations, further steps are to hone in on the ogives in the spectrogram, and to implement it automatically over a lot of centerlines. 
 
+### OGIVE_findr_single_glacier_v2.py
+
+This script does the same as above, but it loops over all the centerlines that are in the RGI database for a specific glacier. The glacier selection happens where the user inputs the name (or id) of the GLIMS glacier. 
+
 ### OGIVE_functions.py 
 
 This script contains various gee function to convert linestrings to usable points in order to compute zonal stats.
